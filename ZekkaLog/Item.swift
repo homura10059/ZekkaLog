@@ -8,16 +8,17 @@
 import Foundation
 import SwiftData
 
-enum MedicationType: String, Codable, CaseIterable {
+enum MedicationType: String, Codable, CaseIterable, Identifiable {
     case cedar = "スギ花粉"
     case dustMite = "ダニ"
 
+    var id: String { rawValue }
     var displayName: String { rawValue }
 
     var systemImage: String {
         switch self {
         case .cedar: return "leaf.fill"
-        case .dustMite: return "allergens.fill"
+        case .dustMite: return "ant.fill"
         }
     }
 }
