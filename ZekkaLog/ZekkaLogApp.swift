@@ -7,12 +7,13 @@
 
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 @main
 struct ZekkaLogApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            MedicationRecord.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -22,6 +23,10 @@ struct ZekkaLogApp: App {
             fatalError("Could not create ModelContainer: \(error)")
         }
     }()
+
+    init() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
+    }
 
     var body: some Scene {
         WindowGroup {
