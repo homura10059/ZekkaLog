@@ -86,7 +86,7 @@ private struct MedicationButton: View {
             .frame(maxWidth: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(isTakenToday ? Color(.systemGreen).opacity(0.1) : Color(.secondarySystemBackground))
+                    .fill(isTakenToday ? Color.green.opacity(0.1) : Color(uiColor: .secondarySystemBackground))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 16)

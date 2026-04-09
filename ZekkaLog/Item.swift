@@ -25,7 +25,6 @@ enum MedicationType: String, Codable, CaseIterable, Identifiable {
 
 @Model
 final class MedicationRecord {
-    var id: UUID
     var typeRawValue: String
     var takenAt: Date
 
@@ -34,7 +33,6 @@ final class MedicationRecord {
     }
 
     init(type: MedicationType, takenAt: Date = Date()) {
-        self.id = UUID()
         self.typeRawValue = type.rawValue
         self.takenAt = takenAt
     }

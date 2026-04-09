@@ -17,7 +17,6 @@ struct TimerView: View {
     @State private var isCompleted = false
     @State private var notificationRequestId = UUID().uuidString
 
-    private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     private let totalSeconds = 60
 
     var body: some View {
@@ -28,7 +27,7 @@ struct TimerView: View {
 
             ZStack {
                 Circle()
-                    .stroke(Color(.systemGray5), lineWidth: 16)
+                    .stroke(Color(uiColor: .systemGray5), lineWidth: 16)
 
                 Circle()
                     .trim(from: 0, to: CGFloat(timeRemaining) / CGFloat(totalSeconds))
@@ -81,21 +80,24 @@ struct TimerView: View {
         .padding(32)
         .navigationTitle("服薬タイマー")
         .navigationBarBackButtonHidden(true)
-        .onAppear {
+        .task {
             scheduleNotification()
+            await runTimer()
         }
         .onDisappear {
             if !isCompleted {
                 cancelNotification()
             }
         }
-        .onReceive(timer) { _ in
-            guard !isCompleted, timeRemaining > 0 else { return }
-            timeRemaining -= 1
-            if timeRemaining == 0 {
-                completeTimer()
-            }
+    }
+
+    private func runTimer() async {
+        for remaining in stride(from: totalSeconds - 1, through: 0, by: -1) {
+            try? await Task.sleep(for: .seconds(1))
+            guard !Task.isCancelled else { return }
+            timeRemaining = remaining
         }
+        completeTimer()
     }
 
     private func scheduleNotification() {
@@ -104,7 +106,7 @@ struct TimerView: View {
         content.body = "\(medicationType.displayName) の服薬が完了しました"
         content.sound = .default
 
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 60, repeats: false)
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: TimeInterval(totalSeconds), repeats: false)
         let request = UNNotificationRequest(identifier: notificationRequestId, content: content, trigger: trigger)
         UNUserNotificationCenter.current().add(request)
     }
@@ -115,8 +117,7 @@ struct TimerView: View {
 
     private func completeTimer() {
         isCompleted = true
-        let record = MedicationRecord(type: medicationType)
-        modelContext.insert(record)
+        modelContext.insert(MedicationRecord(type: medicationType))
     }
 }
 
