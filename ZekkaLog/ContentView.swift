@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UserNotifications
 
 struct ContentView: View {
     var body: some View {
@@ -23,6 +24,10 @@ struct ContentView: View {
             .tabItem {
                 Label("履歴", systemImage: "list.bullet")
             }
+        }
+        .task {
+            _ = try? await UNUserNotificationCenter.current()
+                .requestAuthorization(options: [.alert, .sound, .badge])
         }
     }
 }
