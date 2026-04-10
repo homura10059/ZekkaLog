@@ -70,7 +70,7 @@ private struct RecordRow: View {
         HStack(spacing: 12) {
             Image(systemName: record.type.systemImage)
                 .font(.title3)
-                .foregroundStyle(.accent)
+                .foregroundStyle(.tint)
                 .frame(width: 32)
 
             VStack(alignment: .leading, spacing: 2) {
