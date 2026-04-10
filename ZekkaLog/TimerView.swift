@@ -12,10 +12,12 @@ struct TimerView: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var timeRemaining: Int = 60
     @State private var isCompleted = false
     @State private var notificationRequestId = UUID().uuidString
+    @State private var endDate: Date? = nil
 
     private let totalSeconds = 60
 
@@ -89,13 +91,27 @@ struct TimerView: View {
                 cancelNotification()
             }
         }
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active, !isCompleted, let deadline = endDate else { return }
+            let remaining = max(0, Int(deadline.timeIntervalSince(Date())))
+            if remaining == 0 {
+                completeTimer()
+            } else {
+                timeRemaining = remaining
+            }
+        }
     }
 
     private func runTimer() async {
-        for remaining in stride(from: totalSeconds - 1, through: 0, by: -1) {
+        let deadline = Date().addingTimeInterval(TimeInterval(totalSeconds))
+        endDate = deadline
+
+        while true {
             try? await Task.sleep(for: .seconds(1))
             guard !Task.isCancelled else { return }
+            let remaining = max(0, Int(deadline.timeIntervalSince(Date())))
             timeRemaining = remaining
+            if remaining == 0 { break }
         }
         completeTimer()
     }
@@ -116,6 +132,7 @@ struct TimerView: View {
     }
 
     private func completeTimer() {
+        guard !isCompleted else { return }
         isCompleted = true
         modelContext.insert(MedicationRecord(type: medicationType))
     }
