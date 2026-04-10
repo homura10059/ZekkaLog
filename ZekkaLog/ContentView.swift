@@ -2,7 +2,6 @@
 //  ContentView.swift
 //  ZekkaLog
 //
-//  Created by 大村勇人 on 2026/02/23.
 //
 
 import SwiftUI
