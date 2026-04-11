@@ -95,6 +95,7 @@ private struct MedicationButton: View {
         }
         .buttonStyle(.plain)
         .foregroundStyle(.primary)
+        .disabled(isTakenToday)
     }
 }
 
