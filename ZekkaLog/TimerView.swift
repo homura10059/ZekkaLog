@@ -16,6 +16,7 @@ struct TimerView: View {
 
     @State private var timeRemaining: Int = 60
     @State private var isCompleted = false
+    @State private var isCancelled = false
     @State private var notificationRequestId = UUID().uuidString
     @State private var endDate: Date? = nil
 
@@ -74,6 +75,7 @@ struct TimerView: View {
                     .multilineTextAlignment(.center)
 
                 Button("キャンセル") {
+                    isCancelled = true
                     dismiss()
                 }
                 .foregroundStyle(.red)
@@ -83,11 +85,13 @@ struct TimerView: View {
         .navigationTitle("服薬タイマー")
         .navigationBarBackButtonHidden(true)
         .task {
-            scheduleNotification()
+            if endDate == nil {
+                scheduleNotification()
+            }
             await runTimer()
         }
         .onDisappear {
-            if !isCompleted {
+            if !isCompleted && isCancelled {
                 cancelNotification()
             }
         }
@@ -103,8 +107,20 @@ struct TimerView: View {
     }
 
     private func runTimer() async {
-        let deadline = Date().addingTimeInterval(TimeInterval(totalSeconds))
-        endDate = deadline
+        let deadline: Date
+        if let existing = endDate {
+            deadline = existing
+        } else {
+            deadline = Date().addingTimeInterval(TimeInterval(totalSeconds))
+            endDate = deadline
+        }
+
+        let initialRemaining = max(0, Int(deadline.timeIntervalSince(Date())))
+        timeRemaining = initialRemaining
+        if initialRemaining == 0 {
+            completeTimer()
+            return
+        }
 
         while true {
             try? await Task.sleep(for: .seconds(1))
