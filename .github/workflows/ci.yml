@@ -26,7 +26,7 @@ jobs:
           xcodebuild build \
             -project ZekkaLog.xcodeproj \
             -scheme ZekkaLog \
-            -destination 'platform=iOS Simulator,name=Any iOS Simulator Device' \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
             CODE_SIGNING_ALLOWED=NO
 
       - name: Run Unit Tests
@@ -34,6 +34,6 @@ jobs:
           xcodebuild test \
             -project ZekkaLog.xcodeproj \
             -scheme ZekkaLog \
-            -destination 'platform=iOS Simulator,name=Any iOS Simulator Device' \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
             -only-testing ZekkaLogTests \
             CODE_SIGNING_ALLOWED=NO
