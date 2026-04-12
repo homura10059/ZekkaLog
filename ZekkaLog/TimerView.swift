@@ -208,6 +208,7 @@ struct TimerView: View {
         if let existing = intervalEndDate {
             deadline = existing
         } else {
+            // フォールバック: completeMedicationTimer() が先に intervalEndDate を設定するため通常は通らない
             deadline = Date().addingTimeInterval(TimeInterval(totalIntervalSeconds))
             intervalEndDate = deadline
             scheduleIntervalNotification()
@@ -235,7 +236,11 @@ struct TimerView: View {
         isMedicationCompleted = true
         modelContext.insert(MedicationRecord(type: medicationType))
         if needsInterval {
-            timeRemaining = totalIntervalSeconds
+            let medEnd = medicationEndDate ?? Date()
+            let deadline = medEnd.addingTimeInterval(TimeInterval(totalIntervalSeconds))
+            intervalEndDate = deadline
+            scheduleIntervalNotification()
+            timeRemaining = max(0, Int(deadline.timeIntervalSince(Date())))
             isInIntervalPhase = true
         }
     }
@@ -261,12 +266,15 @@ struct TimerView: View {
     }
 
     private func scheduleIntervalNotification() {
+        guard let deadline = intervalEndDate else { return }
+        let delay = max(1, deadline.timeIntervalSince(Date()))
+
         let content = UNMutableNotificationContent()
         content.title = "インターバル完了"
         content.body = "次の薬を服薬できます"
         content.sound = .default
 
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: TimeInterval(totalIntervalSeconds), repeats: false)
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: delay, repeats: false)
         let request = UNNotificationRequest(identifier: intervalNotificationId, content: content, trigger: trigger)
         UNUserNotificationCenter.current().add(request)
     }
