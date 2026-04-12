@@ -52,7 +52,7 @@ struct TimerView: View {
 
             ZStack {
                 Circle()
-                    .stroke(Color(uiColor: .systemGray5), lineWidth: 16)
+                    .stroke(Color(.systemGray5), lineWidth: 16)
 
                 let isCurrentPhaseCompleted = isInIntervalPhase ? isIntervalCompleted : isMedicationCompleted
                 Circle()
@@ -67,11 +67,13 @@ struct TimerView: View {
                 VStack(spacing: 8) {
                     if isCurrentPhaseCompleted {
                         Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 48))
+                            .font(.system(.largeTitle))
+                            .imageScale(.large)
                             .foregroundStyle(.green)
                     } else {
                         Text("\(timeRemaining)")
-                            .font(.system(size: 64, weight: .thin, design: .rounded))
+                            .font(.system(.largeTitle, design: .rounded))
+                            .fontWeight(.thin)
                         Text("秒")
                             .font(.title3)
                             .foregroundStyle(.secondary)

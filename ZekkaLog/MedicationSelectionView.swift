@@ -73,7 +73,7 @@ private struct MedicationButton: View {
         Button(action: action) {
             HStack(spacing: 16) {
                 Image(systemName: type.systemImage)
-                    .font(.system(size: 32))
+                    .font(.title2)
                     .frame(width: 48)
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -97,7 +97,7 @@ private struct MedicationButton: View {
             .frame(maxWidth: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(isTakenToday ? Color.green.opacity(0.1) : Color(uiColor: .secondarySystemBackground))
+                    .fill(isTakenToday ? Color.green.opacity(0.1) : Color(.secondarySystemBackground))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
