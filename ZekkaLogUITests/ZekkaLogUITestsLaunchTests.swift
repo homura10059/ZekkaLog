@@ -2,8 +2,6 @@
 //  ZekkaLogUITestsLaunchTests.swift
 //  ZekkaLogUITests
 //
-//  Created by 大村勇人 on 2026/02/23.
-//
 
 import XCTest
 

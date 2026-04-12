@@ -2,8 +2,6 @@
 //  ZekkaLogTests.swift
 //  ZekkaLogTests
 //
-//  Created by 大村勇人 on 2026/02/23.
-//
 
 import Testing
 @testable import ZekkaLog
