@@ -24,6 +24,13 @@ struct ContentView: View {
             .tabItem {
                 Label("履歴", systemImage: "list.bullet")
             }
+
+            NavigationStack {
+                SettingsView()
+            }
+            .tabItem {
+                Label("設定", systemImage: "gearshape.fill")
+            }
         }
         .task {
             _ = try? await UNUserNotificationCenter.current()
