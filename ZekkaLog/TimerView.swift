@@ -9,40 +9,63 @@ import UserNotifications
 
 struct TimerView: View {
     let medicationType: MedicationType
+    let needsInterval: Bool
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var timeRemaining: Int = 60
-    @State private var isCompleted = false
+    @State private var isMedicationCompleted = false
+    @State private var isIntervalCompleted = false
     @State private var isCancelled = false
-    @State private var notificationRequestId = UUID().uuidString
-    @State private var endDate: Date? = nil
+    @State private var isInIntervalPhase = false
 
-    private let totalSeconds = 60
+    @State private var medicationNotificationId = UUID().uuidString
+    @State private var intervalNotificationId = UUID().uuidString
+    @State private var medicationEndDate: Date? = nil
+    @State private var intervalEndDate: Date? = nil
+
+    private let totalMedicationSeconds = 60
+    private let totalIntervalSeconds = 300
+
+    private var currentTotalSeconds: Int {
+        isInIntervalPhase ? totalIntervalSeconds : totalMedicationSeconds
+    }
 
     var body: some View {
         VStack(spacing: 40) {
-            Text(medicationType.displayName)
-                .font(.title)
-                .fontWeight(.bold)
+            if isInIntervalPhase {
+                VStack(spacing: 4) {
+                    Text(medicationType.displayName)
+                        .font(.headline)
+                        .foregroundStyle(.secondary)
+                    Text("インターバル")
+                        .font(.title)
+                        .fontWeight(.bold)
+                }
+            } else {
+                Text(medicationType.displayName)
+                    .font(.title)
+                    .fontWeight(.bold)
+            }
 
             ZStack {
                 Circle()
                     .stroke(Color(uiColor: .systemGray5), lineWidth: 16)
 
+                let isCurrentPhaseCompleted = isInIntervalPhase ? isIntervalCompleted : isMedicationCompleted
                 Circle()
-                    .trim(from: 0, to: CGFloat(timeRemaining) / CGFloat(totalSeconds))
+                    .trim(from: 0, to: CGFloat(timeRemaining) / CGFloat(currentTotalSeconds))
                     .stroke(
-                        isCompleted ? Color.green : Color.accentColor,
+                        isCurrentPhaseCompleted ? Color.green : Color.accentColor,
                         style: StrokeStyle(lineWidth: 16, lineCap: .round)
                     )
                     .rotationEffect(.degrees(-90))
                     .animation(.linear(duration: 1), value: timeRemaining)
 
                 VStack(spacing: 8) {
-                    if isCompleted {
+                    if isCurrentPhaseCompleted {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 48))
                             .foregroundStyle(.green)
@@ -57,68 +80,114 @@ struct TimerView: View {
             }
             .frame(width: 240, height: 240)
 
-            if isCompleted {
-                Text("服薬完了！")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.green)
+            if isInIntervalPhase {
+                if isIntervalCompleted {
+                    Text("インターバル完了！")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.green)
+                    Text("次の薬を服薬できます")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
 
-                Button("閉じる") {
-                    dismiss()
+                    Button("閉じる") {
+                        dismiss()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                } else {
+                    Text("次の薬の服薬まで\nお待ちください")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+
+                    Button("キャンセル") {
+                        isCancelled = true
+                        dismiss()
+                    }
+                    .foregroundStyle(.red)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
             } else {
-                Text("薬を舌の下に置いて、\n溶けるまでそのままにしてください")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+                if isMedicationCompleted && !needsInterval {
+                    Text("服薬完了！")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.green)
 
-                Button("キャンセル") {
-                    isCancelled = true
-                    dismiss()
+                    Button("閉じる") {
+                        dismiss()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                } else if !isMedicationCompleted {
+                    Text("薬を舌の下に置いて、\n溶けるまでそのままにしてください")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+
+                    Button("キャンセル") {
+                        isCancelled = true
+                        dismiss()
+                    }
+                    .foregroundStyle(.red)
                 }
-                .foregroundStyle(.red)
             }
         }
         .padding(32)
-        .navigationTitle("服薬タイマー")
+        .navigationTitle(isInIntervalPhase ? "インターバルタイマー" : "服薬タイマー")
         .navigationBarBackButtonHidden(true)
-        .task {
-            if endDate == nil {
-                scheduleNotification()
+        .task(id: isInIntervalPhase) {
+            if isInIntervalPhase {
+                await runIntervalTimer()
+            } else {
+                await runMedicationTimer()
             }
-            await runTimer()
         }
         .onDisappear {
-            if !isCompleted && isCancelled {
-                cancelNotification()
+            if isCancelled {
+                if isInIntervalPhase {
+                    cancelIntervalNotification()
+                } else {
+                    cancelMedicationNotification()
+                }
             }
         }
         .onChange(of: scenePhase) { _, newPhase in
-            guard newPhase == .active, !isCompleted, let deadline = endDate else { return }
-            let remaining = max(0, Int(deadline.timeIntervalSince(Date())))
-            if remaining == 0 {
-                completeTimer()
+            guard newPhase == .active else { return }
+            if isInIntervalPhase {
+                guard !isIntervalCompleted, let deadline = intervalEndDate else { return }
+                let remaining = max(0, Int(deadline.timeIntervalSince(Date())))
+                if remaining == 0 {
+                    completeIntervalTimer()
+                } else {
+                    timeRemaining = remaining
+                }
             } else {
-                timeRemaining = remaining
+                guard !isMedicationCompleted, let deadline = medicationEndDate else { return }
+                let remaining = max(0, Int(deadline.timeIntervalSince(Date())))
+                if remaining == 0 {
+                    completeMedicationTimer()
+                } else {
+                    timeRemaining = remaining
+                }
             }
         }
     }
 
-    private func runTimer() async {
+    private func runMedicationTimer() async {
         let deadline: Date
-        if let existing = endDate {
+        if let existing = medicationEndDate {
             deadline = existing
         } else {
-            deadline = Date().addingTimeInterval(TimeInterval(totalSeconds))
-            endDate = deadline
+            deadline = Date().addingTimeInterval(TimeInterval(totalMedicationSeconds))
+            medicationEndDate = deadline
+            scheduleMedicationNotification()
         }
 
         let initialRemaining = max(0, Int(deadline.timeIntervalSince(Date())))
         timeRemaining = initialRemaining
         if initialRemaining == 0 {
-            completeTimer()
+            completeMedicationTimer()
             return
         }
 
@@ -129,34 +198,85 @@ struct TimerView: View {
             timeRemaining = remaining
             if remaining == 0 { break }
         }
-        completeTimer()
+        completeMedicationTimer()
     }
 
-    private func scheduleNotification() {
+    private func runIntervalTimer() async {
+        let deadline: Date
+        if let existing = intervalEndDate {
+            deadline = existing
+        } else {
+            deadline = Date().addingTimeInterval(TimeInterval(totalIntervalSeconds))
+            intervalEndDate = deadline
+            scheduleIntervalNotification()
+        }
+
+        let initialRemaining = max(0, Int(deadline.timeIntervalSince(Date())))
+        timeRemaining = initialRemaining
+        if initialRemaining == 0 {
+            completeIntervalTimer()
+            return
+        }
+
+        while true {
+            try? await Task.sleep(for: .seconds(1))
+            guard !Task.isCancelled else { return }
+            let remaining = max(0, Int(deadline.timeIntervalSince(Date())))
+            timeRemaining = remaining
+            if remaining == 0 { break }
+        }
+        completeIntervalTimer()
+    }
+
+    private func completeMedicationTimer() {
+        guard !isMedicationCompleted else { return }
+        isMedicationCompleted = true
+        modelContext.insert(MedicationRecord(type: medicationType))
+        if needsInterval {
+            timeRemaining = totalIntervalSeconds
+            isInIntervalPhase = true
+        }
+    }
+
+    private func completeIntervalTimer() {
+        guard !isIntervalCompleted else { return }
+        isIntervalCompleted = true
+    }
+
+    private func scheduleMedicationNotification() {
         let content = UNMutableNotificationContent()
         content.title = "服薬完了"
         content.body = "\(medicationType.displayName) の服薬が完了しました"
         content.sound = .default
 
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: TimeInterval(totalSeconds), repeats: false)
-        let request = UNNotificationRequest(identifier: notificationRequestId, content: content, trigger: trigger)
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: TimeInterval(totalMedicationSeconds), repeats: false)
+        let request = UNNotificationRequest(identifier: medicationNotificationId, content: content, trigger: trigger)
         UNUserNotificationCenter.current().add(request)
     }
 
-    private func cancelNotification() {
-        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [notificationRequestId])
+    private func cancelMedicationNotification() {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [medicationNotificationId])
     }
 
-    private func completeTimer() {
-        guard !isCompleted else { return }
-        isCompleted = true
-        modelContext.insert(MedicationRecord(type: medicationType))
+    private func scheduleIntervalNotification() {
+        let content = UNMutableNotificationContent()
+        content.title = "インターバル完了"
+        content.body = "次の薬を服薬できます"
+        content.sound = .default
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: TimeInterval(totalIntervalSeconds), repeats: false)
+        let request = UNNotificationRequest(identifier: intervalNotificationId, content: content, trigger: trigger)
+        UNUserNotificationCenter.current().add(request)
+    }
+
+    private func cancelIntervalNotification() {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [intervalNotificationId])
     }
 }
 
 #Preview {
     NavigationStack {
-        TimerView(medicationType: .cedar)
+        TimerView(medicationType: .cedar, needsInterval: false)
     }
     .modelContainer(for: MedicationRecord.self, inMemory: true)
 }

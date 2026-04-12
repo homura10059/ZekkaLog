@@ -10,6 +10,7 @@ struct MedicationSelectionView: View {
     @Query(sort: \MedicationRecord.takenAt, order: .reverse)
     private var records: [MedicationRecord]
 
+    @AppStorage("medicationTarget") private var medicationTarget: MedicationTarget = .both
     @State private var selectedType: MedicationType? = nil
 
     private var todayRecordTypes: Set<String> {
@@ -20,6 +21,16 @@ struct MedicationSelectionView: View {
                 .filter { calendar.startOfDay(for: $0.takenAt) == today }
                 .map { $0.typeRawValue }
         )
+    }
+
+    private var targetedTypes: [MedicationType] {
+        medicationTarget.includedTypes
+    }
+
+    private func needsIntervalAfter(_ type: MedicationType) -> Bool {
+        guard medicationTarget == .both else { return false }
+        let otherType: MedicationType = type == .cedar ? .dustMite : .cedar
+        return !todayRecordTypes.contains(otherType.rawValue)
     }
 
     var body: some View {
@@ -34,7 +45,7 @@ struct MedicationSelectionView: View {
                 .foregroundStyle(.secondary)
 
             VStack(spacing: 16) {
-                ForEach(MedicationType.allCases, id: \.self) { type in
+                ForEach(targetedTypes, id: \.self) { type in
                     MedicationButton(
                         type: type,
                         isTakenToday: todayRecordTypes.contains(type.rawValue),
@@ -48,7 +59,7 @@ struct MedicationSelectionView: View {
         }
         .navigationTitle("舌下免疫療法")
         .navigationDestination(item: $selectedType) { type in
-            TimerView(medicationType: type)
+            TimerView(medicationType: type, needsInterval: needsIntervalAfter(type))
         }
     }
 }
