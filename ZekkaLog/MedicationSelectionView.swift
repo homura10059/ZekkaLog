@@ -12,10 +12,11 @@ struct MedicationSelectionView: View {
 
     @AppStorage("medicationTarget") private var medicationTarget: MedicationTarget = .both
     @State private var selectedType: MedicationType? = nil
+    @State private var today: Date = Calendar.current.startOfDay(for: Date())
+    @Environment(\.scenePhase) private var scenePhase
 
     private var todayRecordTypes: Set<String> {
         let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
         return Set(
             records
                 .filter { calendar.startOfDay(for: $0.takenAt) == today }
@@ -60,6 +61,10 @@ struct MedicationSelectionView: View {
         .navigationTitle("舌下免疫療法")
         .navigationDestination(item: $selectedType) { type in
             TimerView(medicationType: type, needsInterval: needsIntervalAfter(type))
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active else { return }
+            today = Calendar.current.startOfDay(for: Date())
         }
     }
 }
