@@ -21,13 +21,15 @@ struct TimerView: View {
     @State private var isCancelled = false
     @State private var isInIntervalPhase = false
 
+    @AppStorage("intervalMinutes") private var intervalMinutes: Int = 5
+
     @State private var medicationNotificationId = UUID().uuidString
     @State private var intervalNotificationId = UUID().uuidString
     @State private var medicationEndDate: Date? = nil
     @State private var intervalEndDate: Date? = nil
 
     private let totalMedicationSeconds = 60
-    private let totalIntervalSeconds = 300
+    private var totalIntervalSeconds: Int { intervalMinutes * 60 }
 
     private var currentTotalSeconds: Int {
         isInIntervalPhase ? totalIntervalSeconds : totalMedicationSeconds
