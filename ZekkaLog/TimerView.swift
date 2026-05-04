@@ -31,6 +31,25 @@ struct TimerView: View {
     private let totalMedicationSeconds = 60
     private var totalIntervalSeconds: Int { intervalMinutes * 60 }
 
+    private var formattedTimeRemaining: String {
+        if timeRemaining >= 3600 {
+            let h = timeRemaining / 3600
+            let m = (timeRemaining % 3600) / 60
+            let s = timeRemaining % 60
+            return String(format: "%d:%02d:%02d", h, m, s)
+        } else if timeRemaining >= 60 {
+            let m = timeRemaining / 60
+            let s = timeRemaining % 60
+            return String(format: "%d:%02d", m, s)
+        } else {
+            return "\(timeRemaining)"
+        }
+    }
+
+    private var timeUnit: String {
+        timeRemaining < 60 ? "秒" : ""
+    }
+
     private var currentTotalSeconds: Int {
         isInIntervalPhase ? totalIntervalSeconds : totalMedicationSeconds
     }
@@ -73,12 +92,15 @@ struct TimerView: View {
                             .imageScale(.large)
                             .foregroundStyle(.green)
                     } else {
-                        Text("\(timeRemaining)")
+                        Text(formattedTimeRemaining)
                             .font(.system(.largeTitle, design: .rounded))
                             .fontWeight(.thin)
-                        Text("秒")
-                            .font(.title3)
-                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                        if !timeUnit.isEmpty {
+                            Text(timeUnit)
+                                .font(.title3)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
             }
